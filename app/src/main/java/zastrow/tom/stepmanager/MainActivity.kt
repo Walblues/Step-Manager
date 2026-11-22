@@ -2,6 +2,7 @@ package zastrow.tom.stepmanager
 
 import android.os.Bundle
 import android.util.Log
+import android.widget.Button
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -17,15 +18,60 @@ import com.samsung.android.sdk.health.data.HealthDataService
 import com.samsung.android.sdk.health.data.HealthDataStore
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
+import androidx.activity.result.contract.ActivityResultContracts
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var healthDataStore: HealthDataStore
+    private lateinit var googleSheetsAuth: GoogleSheetsAuth
+    private var accessToken: String? = null
+
+    private val authorizationLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.StartIntentSenderForResult()
+        ) { result ->
+            Log.d("MainActivity", "Authorization launcher returned")
+            Log.d("MainActivity", "Result code: ${result.resultCode}")
+
+            try {
+                googleSheetsAuth.onAuthorizationResult(result.data)
+            } catch (e: Exception) {
+                Log.e("MainActivity", "Authorization result processing failed", e)
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
+
+        googleSheetsAuth = GoogleSheetsAuth(
+            this,
+            authorizationLauncher
+        ) { token ->
+            Log.d("MainActivity", "Received Google access token")
+            accessToken = token
+        }
+
+        findViewById<Button>(R.id.authorizeGoogleButton)
+            .setOnClickListener {
+                googleSheetsAuth.authorize()
+            }
+
+        findViewById<Button>(R.id.updateSheetButton).setOnClickListener {
+            val token = accessToken
+
+            if (token == null) {
+                Log.e("MainActivity", "Not authorized")
+                return@setOnClickListener
+            }
+
+            lifecycleScope.launch {
+                val success = GoogleSheets.updateCell(token, "B2", 250)
+                Log.d("MainActivity", "Update successful: $success")
+            }
+        }
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)

@@ -8,6 +8,15 @@ android {
     namespace = "zastrow.tom.stepmanager"
     compileSdk = 36
 
+    signingConfigs {
+        create("githubConfig") {
+            storeFile = file("github-release.jks")
+            storePassword = "password123"
+            keyAlias = "github-key"
+            keyPassword = "password123"
+        }
+    }
+
     defaultConfig {
         applicationId = "zastrow.tom.stepmanager"
         minSdk = 35
@@ -20,22 +29,23 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("githubConfig")
         }
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
     kotlin {
         compilerOptions {
-            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11
+            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21
         }
     }
 }
@@ -45,6 +55,7 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.material)
+    implementation(libs.play.services.auth)
     implementation(fileTree(mapOf(
         "dir" to "libs",
         "include" to listOf("*.aar")
