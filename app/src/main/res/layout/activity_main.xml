@@ -21,11 +21,51 @@
         android:id="@+id/updateSheetButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Edit Sheet"
+        android:text="Sync"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/authorizeGoogleButton"
         app:layout_constraintVertical_bias="0.05" />
+
+    <TextView
+        android:id="@+id/lastUpdated"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/lastSynced"
+        android:textSize="20sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/updateSheetButton"
+        app:layout_constraintVertical_bias="0.85" />
+
+    <EditText
+        android:id="@+id/editStepCell"
+        android:layout_width="109dp"
+        android:layout_height="47dp"
+        android:ems="10"
+        android:inputType="text"
+        android:hint="Step Cell"
+        android:textAlignment="center"
+        app:layout_constraintBottom_toTopOf="@+id/authorizeGoogleButton"
+        app:layout_constraintEnd_toStartOf="@+id/editTimeCell"
+        app:layout_constraintHorizontal_chainStyle="spread"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <EditText
+        android:id="@+id/editTimeCell"
+        android:layout_width="109dp"
+        android:layout_height="47dp"
+        android:ems="10"
+        android:inputType="text"
+        android:hint="Time Cell"
+        android:textAlignment="center"
+        app:layout_constraintBottom_toTopOf="@+id/authorizeGoogleButton"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/editStepCell"
+        app:layout_constraintTop_toTopOf="parent" />
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>

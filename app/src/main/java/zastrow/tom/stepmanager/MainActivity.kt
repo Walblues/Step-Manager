@@ -3,6 +3,9 @@ package zastrow.tom.stepmanager
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
+import android.widget.EditText
+import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -19,12 +22,17 @@ import com.samsung.android.sdk.health.data.HealthDataStore
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.work.OneTimeWorkRequestBuilder
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var healthDataStore: HealthDataStore
     private lateinit var googleSheetsAuth: GoogleSheetsAuth
     private var accessToken: String? = null
+    private lateinit var stepCellEditText: EditText
+    private lateinit var timeCellEditText: EditText
 
     private val authorizationLauncher =
         registerForActivityResult(
@@ -45,6 +53,18 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
 
+        stepCellEditText = findViewById<EditText>(R.id.editStepCell)
+        timeCellEditText = findViewById<EditText>(R.id.editTimeCell)
+
+        val lastUpdatedText = findViewById<TextView>(R.id.lastUpdated)
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                DataStore(applicationContext).lastUpdated.collect { lastUpdated ->
+                    lastUpdatedText.text = getString(R.string.lastSynced, lastUpdated)
+                }
+            }
+        }
+
         googleSheetsAuth = GoogleSheetsAuth(
             this,
             authorizationLauncher
@@ -59,16 +79,21 @@ class MainActivity : AppCompatActivity() {
             }
 
         findViewById<Button>(R.id.updateSheetButton).setOnClickListener {
-            val token = accessToken
+            val stepCell = stepCellEditText.text.toString()
+            val timeCell = timeCellEditText.text.toString()
 
-            if (token == null) {
-                Log.e("MainActivity", "Not authorized")
+            if (stepCell.isBlank() || timeCell.isBlank()) {
+                Toast.makeText(this, "Please enter both cells", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
             lifecycleScope.launch {
-                val success = GoogleSheets.updateCell(token, "B2", 250)
-                Log.d("MainActivity", "Update successful: $success")
+                // Save the user's cell references
+                DataStore(applicationContext).saveSheetCells(stepCell, timeCell)
+
+                // Enqueue the worker
+                val workRequest = OneTimeWorkRequestBuilder<StepSyncWorker>().build()
+                WorkManager.getInstance(this@MainActivity).enqueue(workRequest)
             }
         }
 

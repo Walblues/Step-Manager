@@ -1,18 +1,15 @@
 package zastrow.tom.stepmanager
 
-import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import androidx.core.content.PackageManagerCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.samsung.android.sdk.health.data.HealthDataService
@@ -23,6 +20,8 @@ import com.samsung.android.sdk.health.data.request.DataTypes
 import com.samsung.android.sdk.health.data.request.LocalTimeFilter
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
 class StepSyncWorker(
     context: Context,
@@ -30,7 +29,9 @@ class StepSyncWorker(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        Log.d("StepManager", "StepSyncWorker started")
+        Log.d("StepSyncWorker", "StepSyncWorker started")
+
+        val (stepCell, timeCell) = DataStore(applicationContext).getSheetCells()
 
         return try {
             val healthDataStore =
@@ -44,7 +45,7 @@ class StepSyncWorker(
                 healthDataStore.getGrantedPermissions(requiredPermissions)
 
             if (!grantedPermissions.containsAll(requiredPermissions)) {
-                Log.e("StepManager", "Samsung Health step permission is missing")
+                Log.e("StepSyncWorker", "Samsung Health step permission is missing")
 
                 showPermissionMissingNotification()
 
@@ -65,7 +66,7 @@ class StepSyncWorker(
 
             val steps = result.dataList.firstOrNull()?.value ?: 0L
 
-            Log.d("StepManager", "Background step count: $steps")
+            Log.d("StepSyncWorker", "Background step count: $steps")
 
             // Send the step count to MacroDroid.
             val intent = Intent("zastrow.tom.STEPS_UPDATED").apply {
@@ -74,10 +75,35 @@ class StepSyncWorker(
 
             applicationContext.sendBroadcast(intent)
 
-            Log.d("StepManager", "Step broadcast sent to MacroDroid")
+            Log.d("StepSyncWorker", "Step broadcast sent to MacroDroid")
+
+            //Get google sheets access token.
+            val tokenProvider = GoogleSheetsTokenProvider(
+                applicationContext
+            )
+
+            val token = tokenProvider.getAccessToken()
+            if (token == null) {
+                Log.e("StepSyncWorker", "Google authorization required")
+                return Result.success()
+            }
+
+            if (!GoogleSheets.updateCell(token, stepCell, steps.toInt())) {
+                return Result.retry()
+            }
+
+            val currentTime = LocalTime.now()
+            val timeString = currentTime.format(DateTimeFormatter.ofPattern("hh:mm"))
+
+            if (!GoogleSheets.updateCell(token, timeCell, timeString)) {
+                return Result.retry()
+            }
+
+            DataStore(applicationContext).saveLastUpdated(timeString)
+
             Result.success()
         } catch (e: Exception) {
-            Log.e("StepManager", "Background step sync failed", e)
+            Log.e("StepSyncWorker", "Background step sync failed", e)
             Result.retry()
         }
     }
@@ -118,7 +144,7 @@ class StepSyncWorker(
             applicationContext, android.Manifest.permission.POST_NOTIFICATIONS)
             != PackageManager.PERMISSION_GRANTED)
         {
-            Log.e("StepManager", "Cannot notify: notification permission missing")
+            Log.e("StepSyncWorker", "Cannot notify: notification permission missing")
             return
         }
 
@@ -144,7 +170,6 @@ class StepSyncWorker(
         NotificationManagerCompat.from(applicationContext)
             .notify(1001, notification)
 
-        Log.d("StepManager", "Permission notification sent")
-
+        Log.d("StepSyncWorker", "Permission notification sent")
     }
 }

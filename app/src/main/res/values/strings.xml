@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Step Manager</string>
+    <string name="lastSynced">Last Synced: %1$s</string>
 </resources>

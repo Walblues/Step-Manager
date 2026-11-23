@@ -19,7 +19,7 @@ object GoogleSheets {
     suspend fun updateCell(
         accessToken: String,
         cell: String,
-        value: Int
+        value: Any
     ): Boolean = withContext(Dispatchers.IO) {
 
         val range = "'$SHEET_NAME'!$cell"

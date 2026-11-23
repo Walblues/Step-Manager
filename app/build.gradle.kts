@@ -56,6 +56,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.material)
     implementation(libs.play.services.auth)
+    implementation(libs.androidx.datastore.preferences)
     implementation(fileTree(mapOf(
         "dir" to "libs",
         "include" to listOf("*.aar")
